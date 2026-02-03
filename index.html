@@ -2,131 +2,199 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BlueAmp Ultra - Auto Lyrics</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>BlueAmp Infinite</title>
     <style>
-        :root { --bg: #02050a; --panel: #0a192f; --accent: #00d2ff; }
-        body { background: var(--bg); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', sans-serif; transition: background 0.15s ease; overflow: hidden; }
+        :root { --accent: #00d2ff; --glass: rgba(10, 25, 47, 0.7); }
         
-        .player { background: var(--panel); width: 92%; max-width: 360px; padding: 20px; border-radius: 30px; border: 1px solid rgba(0,210,255,0.2); box-shadow: 0 25px 50px rgba(0,0,0,0.9); }
-        
-        /* Dual Display: Visualizer + Lyrics */
-        .screen { background: #000; height: 180px; border-radius: 20px; position: relative; overflow: hidden; margin-bottom: 15px; border: 1px solid #1282a2; cursor: pointer; }
-        canvas { width: 100%; height: 100%; opacity: 0.35; } 
-        
-        .lyric-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px; box-sizing: border-box; text-align: center; pointer-events: none;
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: #02050a; color: white; 
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden; 
         }
 
-        #lyric-text {
-            font-size: 16px; font-weight: bold; color: #fff;
-            text-shadow: 0 0 12px rgba(0,210,255,0.8);
-            transition: transform 0.3s ease, opacity 0.3s ease;
+        /* Background Visualizer Full Screen */
+        #visualizer {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 1; opacity: 0.5;
+            filter: blur(2px);
         }
 
-        .progress-area { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--accent); margin-bottom: 15px; }
-        input[type="range"] { flex: 1; accent-color: var(--accent); height: 4px; cursor: pointer; }
+        /* Main Wrapper */
+        .app-container {
+            position: relative; z-index: 10;
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            justify-content: space-between;
+            background: radial-gradient(circle at center, transparent 0%, rgba(2, 5, 10, 0.8) 100%);
+        }
 
-        .btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
-        button { background: rgba(0,210,255,0.05); border: 1px solid var(--accent); color: var(--accent); padding: 12px 0; border-radius: 12px; font-size: 10px; font-weight: bold; cursor: pointer; }
-        button:hover { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
+        /* Area Lirik (Tengah) */
+        .lyrics-section {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            perspective: 1000px; overflow: hidden;
+        }
 
-        #playlist { max-height: 90px; overflow-y: auto; font-size: 11px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
-        .song { padding: 8px; opacity: 0.5; border-radius: 8px; transition: 0.2s; }
-        .song.active { opacity: 1; color: var(--accent); background: rgba(0,210,255,0.1); }
+        .lyrics-window {
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            text-align: center;
+        }
+
+        .lyric-line {
+            font-size: 1.8rem; font-weight: 800; padding: 15px 30px;
+            opacity: 0.15; transition: 0.5s; line-height: 1.4;
+            transform: scale(0.8);
+        }
+
+        .lyric-line.active {
+            opacity: 1; color: var(--accent);
+            transform: scale(1.1);
+            text-shadow: 0 0 30px rgba(0, 210, 255, 0.6);
+        }
+
+        /* Floating Controller (Bawah) */
+        .bottom-panel {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 25px; border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 40px 40px 0 0;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+        }
+
+        .track-info-main { margin-bottom: 15px; text-align: center; }
+        #title { font-size: 16px; font-weight: bold; letter-spacing: 1px; color: var(--accent); }
+
+        .progress-box { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; font-size: 12px; }
+        input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+
+        .main-controls { display: flex; justify-content: space-around; align-items: center; margin-bottom: 15px; }
+        .btn-round {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--accent);
+            color: var(--accent); width: 55px; height: 55px; border-radius: 50%;
+            font-size: 10px; font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        .btn-round:active { transform: scale(0.9); background: var(--accent); color: #000; }
+        
+        #playlist-toggle { 
+            font-size: 11px; color: #8ea8c3; text-decoration: underline; cursor: pointer; display: block; margin-top: 10px;
+        }
+
+        /* Input File Hidden */
+        .add-music {
+            position: absolute; top: 20px; right: 20px;
+            background: var(--glass); padding: 10px 15px;
+            border-radius: 20px; font-size: 11px; border: 1px solid var(--accent);
+            color: var(--accent); cursor: pointer;
+        }
+
+        #playlist-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 100; padding: 40px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
 
-<div class="player">
-    <div class="screen" onclick="toggleVis()">
-        <canvas id="visualizer"></canvas>
-        <div class="lyric-container">
-            <div id="status" style="font-size: 8px; letter-spacing: 2px; margin-bottom: 5px; color: var(--accent);">IDLE</div>
-            <div id="lyric-text">Tap "ADD MP3" untuk mulai</div>
+<canvas id="visualizer"></canvas>
+
+<div class="app-container">
+    <label class="add-music">
+        <input type="file" id="f" accept="audio/*" multiple onchange="load(this.files)" style="display:none;">
+        + ADD TRACKS
+    </label>
+
+    <div class="lyrics-section" onclick="togglePlaylist()">
+        <div id="lyric-wrap" class="lyrics-window">
+            <div class="lyric-line active">BlueAmp Infinite</div>
+            <div class="lyric-line">Tap + untuk mulai musik</div>
         </div>
     </div>
 
-    <div class="progress-area">
-        <span id="cT">0:00</span>
-        <input type="range" id="seek" value="0">
-        <span id="dT">0:00</span>
+    <div class="bottom-panel">
+        <div class="track-info-main">
+            <div id="title">READY TO PLAY</div>
+        </div>
+
+        <div class="progress-box">
+            <span id="cT">0:00</span>
+            <input type="range" id="seek" value="0">
+            <span id="dT">0:00</span>
+        </div>
+
+        <div class="main-controls">
+            <button class="btn-round" onclick="nav(-1)">PREV</button>
+            <button class="btn-round" id="pBtn" onclick="toggle()" style="width:70px; height:70px; font-size:14px;">PLAY</button>
+            <button class="btn-round" onclick="nav(1)">NEXT</button>
+        </div>
+        <center><span id="playlist-toggle">View Playlist</span></center>
     </div>
+</div>
 
-    <div class="btns">
-        <button onclick="nav(-1)">PREV</button>
-        <button id="pBtn" onclick="toggle()">PLAY</button>
-        <button onclick="stop()">STOP</button>
-        <button onclick="nav(1)">NEXT</button>
-    </div>
-
-    <label style="display:block; border:1px dashed var(--accent); padding:12px; border-radius:12px; font-size:11px; color:var(--accent); text-align:center; cursor:pointer; margin-bottom:10px;">
-        <input type="file" id="f" accept="audio/*" multiple onchange="load(this.files)" style="display:none;">
-        + ADD MP3 TO PLAYLIST
-    </label>
-
-    <div id="playlist"></div>
+<div id="playlist-modal" onclick="this.style.display='none'">
+    <h2 style="color: var(--accent);">Playlist</h2>
+    <div id="playlist-list"></div>
 </div>
 
 <script>
     const audio = new Audio();
     let list = [], cur = 0, actx, ana, src, canv, ctx;
-    let isVis = true;
-
-    // Logika Lirik Otomatis (Cerdas berdasarkan waktu)
-    function updateLyrics(t, name) {
-        const lyricEl = document.getElementById('lyric-text');
-        if (t < 2) return lyricEl.innerText = "Prepare to Jam...";
-        if (t < 5) return lyricEl.innerText = "Playing: " + name;
-        
-        // Simulasi lirik jika tidak ada file .lrc
-        const cycle = Math.floor(t / 8) % 4;
-        const lyrics = [
-            "Feel the deep blue rhythm...",
-            "Visualizing the frequencies...",
-            "Enjoying the BlueAmp V4 Experience",
-            "Keep the beat going!"
-        ];
-        lyricEl.innerText = lyrics[cycle];
-    }
+    
+    const dummyLyrics = ["Music is Life", "Feel the Frequency", "Infinite Deep Blue", "BlueAmp V5 Pro", "Pure Audio Bliss", "Powered by GitHub", "Retro Winamp Soul", "Modern Web Tech"];
 
     function load(files) {
-        for (let f of files) list.push({ n: f.name.split('.')[0], u: URL.createObjectURL(f) });
-        show(); if (!audio.src && list.length > 0) play(0);
-    }
-
-    function show() {
-        document.getElementById('playlist').innerHTML = list.map((s, i) => 
-            `<div class="song ${i===cur?'active':''}" onclick="play(${i})">${i+1}. ${s.n}</div>`
-        ).join('');
+        for (let f of files) list.push({ n: f.name.split('.')[0].toUpperCase(), u: URL.createObjectURL(f) });
+        if (!audio.src && list.length > 0) play(0);
     }
 
     function play(i) {
         cur = i; audio.src = list[i].u;
+        document.getElementById('title').innerText = list[i].n;
         document.getElementById('pBtn').innerText = "PAUSE";
-        document.getElementById('status').innerText = "VIBING";
-        show(); audio.play(); initVis();
+        initLyrics();
+        audio.play(); initVis();
+    }
+
+    function initLyrics() {
+        const wrap = document.getElementById('lyric-wrap');
+        wrap.innerHTML = dummyLyrics.map(line => `<div class="lyric-line">${line}</div>`).join('');
     }
 
     function toggle() {
-        if (audio.paused) { audio.play(); document.getElementById('pBtn').innerText = "PAUSE"; }
-        else { audio.pause(); document.getElementById('pBtn').innerText = "PLAY"; }
+        if (!audio.src) return;
+        audio.paused ? (audio.play(), document.getElementById('pBtn').innerText="PAUSE") : (audio.pause(), document.getElementById('pBtn').innerText="PLAY");
     }
 
     function nav(d) { let n = (cur+d+list.length)%list.length; if(list.length>0) play(n); }
-    function toggleVis() { isVis = !isVis; document.getElementById('visualizer').style.opacity = isVis ? "0.35" : "0"; }
+
+    function togglePlaylist() {
+        const modal = document.getElementById('playlist-modal');
+        const listDiv = document.getElementById('playlist-list');
+        listDiv.innerHTML = list.map((s, i) => `<div style="padding:15px; border-bottom:1px solid #111; color:${i===cur? '#00d2ff':'#fff'}" onclick="play(${i})">${s.n}</div>`).join('');
+        modal.style.display = 'block';
+    }
 
     audio.ontimeupdate = () => {
+        if (isNaN(audio.duration)) return;
         const s = document.getElementById('seek');
-        if (!isNaN(audio.duration)) {
-            s.value = (audio.currentTime / audio.duration) * 100;
-            const m = (t) => Math.floor(t/60) + ":" + Math.floor(t%60).toString().padStart(2,'0');
-            document.getElementById('cT').innerText = m(audio.currentTime);
-            document.getElementById('dT').innerText = m(audio.duration);
-            updateLyrics(audio.currentTime, list[cur].n);
-        }
+        s.value = (audio.currentTime / audio.duration) * 100;
+        
+        const lines = document.querySelectorAll('.lyric-line');
+        let index = Math.floor((audio.currentTime / audio.duration) * lines.length);
+        lines.forEach((l, i) => l.classList.toggle('active', i === index));
+        document.getElementById('lyric-wrap').style.transform = `translateY(-${index * 70}px)`;
+
+        const m = (t) => Math.floor(t/60) + ":" + Math.floor(t%60).toString().padStart(2,'0');
+        document.getElementById('cT').innerText = m(audio.currentTime);
+        document.getElementById('dT').innerText = m(audio.duration);
     };
 
     document.getElementById('seek').oninput = (e) => audio.currentTime = (e.target.value / 100) * audio.duration;
@@ -139,8 +207,14 @@
         src.connect(ana); ana.connect(actx.destination);
         canv = document.getElementById('visualizer');
         ctx = canv.getContext('2d');
-        draw();
+        resize(); draw();
     }
+
+    function resize() {
+        canv.width = window.innerWidth;
+        canv.height = window.innerHeight;
+    }
+    window.onresize = resize;
 
     function draw() {
         requestAnimationFrame(draw);
@@ -148,13 +222,16 @@
         ana.getByteFrequencyData(d);
         ctx.clearRect(0, 0, canv.width, canv.height);
         
-        let b = (d[0]+d[1]+d[2])/3;
-        document.body.style.background = `radial-gradient(circle, rgba(0, 210, 255, ${b/900}) 0%, #02050a 100%)`;
-        
-        ctx.fillStyle = '#00d2ff';
-        for (let i = 0; i < 50; i++) {
-            let h = d[i] / 2.2;
-            ctx.fillRect(i * 7, canv.height - h, 5, h);
+        let bass = (d[0]+d[1]+d[2])/3;
+        document.body.style.background = `radial-gradient(circle at center, rgba(0, 210, 255, ${bass/1200}) 0%, #02050a 100%)`;
+
+        ctx.fillStyle = 'rgba(0, 210, 255, 0.4)';
+        let bars = 60;
+        let barWidth = canv.width / bars;
+        for (let i = 0; i < bars; i++) {
+            let h = (d[i] / 255) * canv.height * 0.5;
+            ctx.fillRect(i * barWidth, canv.height - h, barWidth - 2, h);
+            ctx.fillRect(i * barWidth, 0, barWidth - 2, h); // Mirror top
         }
     }
     audio.onended = () => nav(1);
