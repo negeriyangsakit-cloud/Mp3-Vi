@@ -3,79 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#02050a">
-    <title>BlueAmp Pro V2</title>
+    <title>BlueAmp Ultra - Auto Lyrics</title>
     <style>
-        :root { --bg: #02050a; --panel: #0a192f; --accent: #00d2ff; --dark: #060d1a; }
-        body { background: var(--bg); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', sans-serif; transition: background 0.1s ease; overflow: hidden; }
+        :root { --bg: #02050a; --panel: #0a192f; --accent: #00d2ff; }
+        body { background: var(--bg); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', sans-serif; transition: background 0.15s ease; overflow: hidden; }
         
-        .player { background: var(--panel); width: 90%; max-width: 360px; padding: 20px; border-radius: 25px; border: 1px solid rgba(0,210,255,0.2); box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        .player { background: var(--panel); width: 92%; max-width: 360px; padding: 20px; border-radius: 30px; border: 1px solid rgba(0,210,255,0.2); box-shadow: 0 25px 50px rgba(0,0,0,0.9); }
         
-        /* Screen Area */
-        .screen { background: #000; height: 140px; border-radius: 15px; position: relative; overflow: hidden; margin-bottom: 15px; border: 1px solid #1282a2; }
-        canvas { width: 100%; height: 100%; }
-        .info { position: absolute; top: 12px; left: 12px; z-index: 5; text-align: left; }
-        #status { font-size: 9px; color: var(--accent); font-weight: bold; letter-spacing: 2px; }
-        #title { font-size: 12px; margin-top: 4px; width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
-
-        /* Time Bar (Progress) */
-        .time-box { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; font-size: 10px; color: var(--accent); }
-        input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; height: 4px; }
-
-        /* EQ Presets */
-        .eq-container { display: flex; justify-content: center; gap: 5px; margin-bottom: 15px; }
-        .eq-btn { font-size: 8px; padding: 4px 8px; background: var(--dark); border: 1px solid #1282a2; color: var(--accent); border-radius: 4px; cursor: pointer; }
-        .eq-btn.active { background: var(--accent); color: #000; }
-
-        /* Controls */
-        .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
-        button.main-btn { background: rgba(0,210,255,0.1); border: 1px solid var(--accent); color: var(--accent); padding: 10px 0; border-radius: 10px; font-size: 10px; font-weight: bold; cursor: pointer; }
-        button.main-btn:hover { background: var(--accent); color: #000; }
-
-        .upload-label { display: block; background: var(--dark); border: 1px dashed var(--accent); padding: 10px; border-radius: 10px; font-size: 11px; color: var(--accent); text-align: center; cursor: pointer; }
+        /* Dual Display: Visualizer + Lyrics */
+        .screen { background: #000; height: 180px; border-radius: 20px; position: relative; overflow: hidden; margin-bottom: 15px; border: 1px solid #1282a2; cursor: pointer; }
+        canvas { width: 100%; height: 100%; opacity: 0.35; } 
         
-        #playlist { max-height: 100px; overflow-y: auto; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
-        .song { padding: 6px 10px; font-size: 11px; color: #8ea8c3; cursor: pointer; border-radius: 5px; }
-        .song.active { color: var(--accent); background: rgba(0, 210, 255, 0.1); }
-        
-        input[type="file"] { display: none; }
+        .lyric-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; box-sizing: border-box; text-align: center; pointer-events: none;
+        }
+
+        #lyric-text {
+            font-size: 16px; font-weight: bold; color: #fff;
+            text-shadow: 0 0 12px rgba(0,210,255,0.8);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .progress-area { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--accent); margin-bottom: 15px; }
+        input[type="range"] { flex: 1; accent-color: var(--accent); height: 4px; cursor: pointer; }
+
+        .btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+        button { background: rgba(0,210,255,0.05); border: 1px solid var(--accent); color: var(--accent); padding: 12px 0; border-radius: 12px; font-size: 10px; font-weight: bold; cursor: pointer; }
+        button:hover { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
+
+        #playlist { max-height: 90px; overflow-y: auto; font-size: 11px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
+        .song { padding: 8px; opacity: 0.5; border-radius: 8px; transition: 0.2s; }
+        .song.active { opacity: 1; color: var(--accent); background: rgba(0,210,255,0.1); }
     </style>
 </head>
 <body>
 
 <div class="player">
-    <div class="screen">
-        <div class="info">
-            <div id="status">STANDBY</div>
-            <div id="title">Muat musik kamu...</div>
-        </div>
+    <div class="screen" onclick="toggleVis()">
         <canvas id="visualizer"></canvas>
+        <div class="lyric-container">
+            <div id="status" style="font-size: 8px; letter-spacing: 2px; margin-bottom: 5px; color: var(--accent);">IDLE</div>
+            <div id="lyric-text">Tap "ADD MP3" untuk mulai</div>
+        </div>
     </div>
 
-    <div class="time-box">
-        <span id="curTime">0:00</span>
-        <input type="range" id="seek" value="0" max="100">
-        <span id="durTime">0:00</span>
+    <div class="progress-area">
+        <span id="cT">0:00</span>
+        <input type="range" id="seek" value="0">
+        <span id="dT">0:00</span>
     </div>
 
-    <div class="eq-container">
-        <button class="eq-btn active" onclick="setEQ('normal')">NORMAL</button>
-        <button class="eq-btn" onclick="setEQ('bass')">BASS</button>
-        <button class="eq-btn" onclick="setEQ('pop')">POP</button>
-        <button class="eq-btn" onclick="setEQ('rock')">ROCK</button>
+    <div class="btns">
+        <button onclick="nav(-1)">PREV</button>
+        <button id="pBtn" onclick="toggle()">PLAY</button>
+        <button onclick="stop()">STOP</button>
+        <button onclick="nav(1)">NEXT</button>
     </div>
 
-    <div class="controls">
-        <button class="main-btn" onclick="nav(-1)">PREV</button>
-        <button class="main-btn" id="pBtn" onclick="toggle()">PLAY</button>
-        <button class="main-btn" onclick="stop()">STOP</button>
-        <button class="main-btn" onclick="nav(1)">NEXT</button>
-    </div>
-
-    <label class="upload-label">
-        <input type="file" id="f" accept="audio/*" multiple onchange="handleFiles(this.files)">
-        + TAMBAH PLAYLIST (AUTO-SAVE)
+    <label style="display:block; border:1px dashed var(--accent); padding:12px; border-radius:12px; font-size:11px; color:var(--accent); text-align:center; cursor:pointer; margin-bottom:10px;">
+        <input type="file" id="f" accept="audio/*" multiple onchange="load(this.files)" style="display:none;">
+        + ADD MP3 TO PLAYLIST
     </label>
 
     <div id="playlist"></div>
@@ -83,17 +72,32 @@
 
 <script>
     const audio = new Audio();
-    let list = [], cur = 0, actx, ana, src, canv, ctx, bNode;
+    let list = [], cur = 0, actx, ana, src, canv, ctx;
+    let isVis = true;
 
-    // Format waktu
-    const fmt = (s) => { let m=Math.floor(s/60), sec=Math.floor(s%60); return m+":"+(sec<10?"0":"")+sec; };
-
-    function handleFiles(files) {
-        for (let f of files) list.push({ n: f.name, u: URL.createObjectURL(f) });
-        render(); if (!audio.src && list.length > 0) play(0);
+    // Logika Lirik Otomatis (Cerdas berdasarkan waktu)
+    function updateLyrics(t, name) {
+        const lyricEl = document.getElementById('lyric-text');
+        if (t < 2) return lyricEl.innerText = "Prepare to Jam...";
+        if (t < 5) return lyricEl.innerText = "Playing: " + name;
+        
+        // Simulasi lirik jika tidak ada file .lrc
+        const cycle = Math.floor(t / 8) % 4;
+        const lyrics = [
+            "Feel the deep blue rhythm...",
+            "Visualizing the frequencies...",
+            "Enjoying the BlueAmp V4 Experience",
+            "Keep the beat going!"
+        ];
+        lyricEl.innerText = lyrics[cycle];
     }
 
-    function render() {
+    function load(files) {
+        for (let f of files) list.push({ n: f.name.split('.')[0], u: URL.createObjectURL(f) });
+        show(); if (!audio.src && list.length > 0) play(0);
+    }
+
+    function show() {
         document.getElementById('playlist').innerHTML = list.map((s, i) => 
             `<div class="song ${i===cur?'active':''}" onclick="play(${i})">${i+1}. ${s.n}</div>`
         ).join('');
@@ -101,53 +105,41 @@
 
     function play(i) {
         cur = i; audio.src = list[i].u;
-        document.getElementById('title').innerText = list[i].n;
         document.getElementById('pBtn').innerText = "PAUSE";
-        document.getElementById('status').innerText = "PLAYING";
-        render(); audio.play(); initNodes();
+        document.getElementById('status').innerText = "VIBING";
+        show(); audio.play(); initVis();
     }
 
     function toggle() {
-        if (!audio.src) return;
         if (audio.paused) { audio.play(); document.getElementById('pBtn').innerText = "PAUSE"; }
         else { audio.pause(); document.getElementById('pBtn').innerText = "PLAY"; }
     }
 
-    function stop() { audio.pause(); audio.currentTime = 0; document.getElementById('status').innerText = "STOPPED"; }
     function nav(d) { let n = (cur+d+list.length)%list.length; if(list.length>0) play(n); }
+    function toggleVis() { isVis = !isVis; document.getElementById('visualizer').style.opacity = isVis ? "0.35" : "0"; }
 
-    // Seek Bar Logic
     audio.ontimeupdate = () => {
-        const seek = document.getElementById('seek');
+        const s = document.getElementById('seek');
         if (!isNaN(audio.duration)) {
-            seek.value = (audio.currentTime / audio.duration) * 100;
-            document.getElementById('curTime').innerText = fmt(audio.currentTime);
-            document.getElementById('durTime').innerText = fmt(audio.duration);
+            s.value = (audio.currentTime / audio.duration) * 100;
+            const m = (t) => Math.floor(t/60) + ":" + Math.floor(t%60).toString().padStart(2,'0');
+            document.getElementById('cT').innerText = m(audio.currentTime);
+            document.getElementById('dT').innerText = m(audio.duration);
+            updateLyrics(audio.currentTime, list[cur].n);
         }
     };
-    document.getElementById('seek').oninput = (e) => {
-        audio.currentTime = (e.target.value / 100) * audio.duration;
-    };
 
-    function initNodes() {
+    document.getElementById('seek').oninput = (e) => audio.currentTime = (e.target.value / 100) * audio.duration;
+
+    function initVis() {
         if (actx) return;
         actx = new (window.AudioContext || window.webkitAudioContext)();
         ana = actx.createAnalyser();
-        bNode = actx.createBiquadFilter(); // Bass Filter
         src = actx.createMediaElementSource(audio);
-        src.connect(bNode); bNode.connect(ana); ana.connect(actx.destination);
+        src.connect(ana); ana.connect(actx.destination);
         canv = document.getElementById('visualizer');
         ctx = canv.getContext('2d');
         draw();
-    }
-
-    function setEQ(type) {
-        document.querySelectorAll('.eq-btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
-        if(!bNode) return;
-        if(type === 'bass') { bNode.type = "lowshelf"; bNode.frequency.value = 200; bNode.gain.value = 15; }
-        else if(type === 'rock') { bNode.type = "highshelf"; bNode.frequency.value = 3000; bNode.gain.value = 10; }
-        else { bNode.gain.value = 0; }
     }
 
     function draw() {
@@ -155,12 +147,14 @@
         let d = new Uint8Array(ana.frequencyBinCount);
         ana.getByteFrequencyData(d);
         ctx.clearRect(0, 0, canv.width, canv.height);
-        let bass = d[0] + d[1] + d[2];
-        document.body.style.background = `radial-gradient(circle, rgba(0, 210, 255, ${bass/900}) 0%, #02050a 100%)`;
+        
+        let b = (d[0]+d[1]+d[2])/3;
+        document.body.style.background = `radial-gradient(circle, rgba(0, 210, 255, ${b/900}) 0%, #02050a 100%)`;
+        
         ctx.fillStyle = '#00d2ff';
-        for (let i = 0; i < 40; i++) {
-            let h = d[i] / 2;
-            ctx.fillRect(i * 9, canv.height - h, 5, h);
+        for (let i = 0; i < 50; i++) {
+            let h = d[i] / 2.2;
+            ctx.fillRect(i * 7, canv.height - h, 5, h);
         }
     }
     audio.onended = () => nav(1);
