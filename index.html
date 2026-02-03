@@ -3,82 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BlueAmp Pro - Reactive</title>
+    <title>BlueAmp Ultimate</title>
     <style>
         :root {
             --bg: #02050a;
-            --panel: rgba(10, 17, 40, 0.9);
+            --panel: rgba(10, 25, 47, 0.95);
             --accent: #00d2ff;
-            --text: #8ea8c3;
+            --cyan-glow: rgba(0, 210, 255, 0.5);
         }
 
         body {
             background-color: var(--bg);
-            transition: background 0.1s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
             margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            transition: background 0.1s ease;
             overflow: hidden;
         }
 
-        /* Container Utama */
-        .player {
+        .winamp-box {
             background: var(--panel);
-            backdrop-filter: blur(15px);
             width: 90%;
             max-width: 360px;
             padding: 25px;
+            border-radius: 25px;
             border: 1px solid rgba(0, 210, 255, 0.3);
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-            z-index: 2;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.8), 0 0 20px rgba(0, 210, 255, 0.1);
+            text-align: center;
         }
 
-        /* Layar Visualizer */
         .screen {
             background: #000;
-            height: 140px;
-            margin-bottom: 20px;
+            height: 150px;
             border-radius: 15px;
             position: relative;
             overflow: hidden;
+            margin-bottom: 20px;
             border: 1px solid #1282a2;
         }
 
-        canvas {
-            width: 100%;
-            height: 100%;
-        }
+        canvas { width: 100%; height: 100%; display: block; }
 
-        .track-info {
+        .info {
             position: absolute;
-            top: 10px;
+            top: 15px;
             left: 15px;
-            z-index: 10;
+            text-align: left;
+            z-index: 5;
+            pointer-events: none;
         }
 
-        #status {
-            font-size: 10px;
-            font-weight: bold;
-            color: var(--accent);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
+        #status { font-size: 10px; color: var(--accent); font-weight: bold; letter-spacing: 2px; }
+        #title { color: #fff; font-size: 13px; margin-top: 5px; width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        #title {
-            font-size: 14px;
-            color: #fff;
-            margin-top: 5px;
-            width: 200px;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        /* Tombol Kontrol */
         .controls {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -87,29 +67,24 @@
         }
 
         button {
-            background: rgba(18, 130, 162, 0.2);
+            background: rgba(0, 210, 255, 0.1);
             border: 1px solid var(--accent);
             color: var(--accent);
-            padding: 12px 5px;
-            border-radius: 10px;
+            padding: 12px 0;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 10px;
             font-weight: bold;
-            transition: 0.2s;
+            transition: 0.3s;
         }
 
-        button:hover {
-            background: var(--accent);
-            color: #000;
-        }
+        button:hover { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
 
-        /* Upload & Playlist */
-        .upload-btn {
+        .upload-label {
             display: block;
-            text-align: center;
-            padding: 10px;
             border: 1px dashed var(--accent);
-            border-radius: 10px;
+            padding: 12px;
+            border-radius: 12px;
             color: var(--accent);
             font-size: 12px;
             cursor: pointer;
@@ -117,156 +92,125 @@
         }
 
         #playlist {
-            max-height: 80px;
+            max-height: 100px;
             overflow-y: auto;
-            font-size: 12px;
+            text-align: left;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 10px;
         }
 
-        .song-item {
+        .song {
             padding: 8px;
-            color: var(--text);
+            font-size: 12px;
+            color: #8ea8c3;
             cursor: pointer;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-radius: 5px;
         }
 
-        .active { color: var(--accent); font-weight: bold; }
-
+        .song.active { color: var(--accent); background: rgba(0, 210, 255, 0.05); font-weight: bold; }
         input[type="file"] { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="player">
-        <div class="screen">
-            <div class="track-info">
-                <div id="status">Ready</div>
-                <div id="title">Pilih Lagu Anda...</div>
-            </div>
-            <canvas id="visualizer"></canvas>
+<div class="winamp-box">
+    <div class="screen">
+        <div class="info">
+            <div id="status">OFFLINE</div>
+            <div id="title">Tunggu musik...</div>
         </div>
-
-        <div class="controls">
-            <button onclick="prevSong()">PREV</button>
-            <button id="playBtn" onclick="togglePlay()">PLAY</button>
-            <button onclick="stopSong()">STOP</button>
-            <button onclick="nextSong()">NEXT</button>
-        </div>
-
-        <label class="upload-btn">
-            <input type="file" id="audioFile" accept="audio/mp3" multiple onchange="handleFiles(this.files)">
-            + LOAD PLAYLIST
-        </label>
-
-        <div id="playlist"></div>
+        <canvas id="visualizer"></canvas>
     </div>
 
-    <script>
-        let audio = new Audio();
-        let playlist = [];
-        let currentIndex = 0;
-        let audioContext, analyser, source, canvas, ctx;
+    <div class="controls">
+        <button onclick="changeSong(-1)">PREV</button>
+        <button id="playBtn" onclick="togglePlay()">PLAY</button>
+        <button onclick="stopSong()">STOP</button>
+        <button onclick="changeSong(1)">NEXT</button>
+    </div>
 
-        function handleFiles(files) {
-            for (let file of files) {
-                playlist.push({ name: file.name, url: URL.createObjectURL(file) });
-            }
-            updatePlaylistUI();
-            if (audio.paused && playlist.length > 0) loadSong(0);
+    <label class="upload-label">
+        <input type="file" id="files" accept="audio/mp3" multiple onchange="loadFiles(this.files)">
+        + PILIH BANYAK MP3
+    </label>
+
+    <div id="playlist"></div>
+</div>
+
+<script>
+    let audio = new Audio();
+    let playlist = [];
+    let current = 0;
+    let actx, analyzer, src, canvas, ctx;
+
+    function loadFiles(files) {
+        for (let f of files) {
+            playlist.push({ name: f.name, url: URL.createObjectURL(f) });
         }
+        renderPlaylist();
+        if (!audio.src && playlist.length > 0) playTrack(0);
+    }
 
-        function updatePlaylistUI() {
-            const list = document.getElementById('playlist');
-            list.innerHTML = '';
-            playlist.forEach((song, index) => {
-                const div = document.createElement('div');
-                div.className = `song-item ${index === currentIndex ? 'active' : ''}`;
-                div.innerText = `${index + 1}. ${song.name}`;
-                div.onclick = () => loadSong(index);
-                list.appendChild(div);
-            });
+    function renderPlaylist() {
+        const container = document.getElementById('playlist');
+        container.innerHTML = playlist.map((s, i) => 
+            `<div class="song ${i===current?'active':''}" onclick="playTrack(${i})">${i+1}. ${s.name}</div>`
+        ).join('');
+    }
+
+    function playTrack(i) {
+        current = i;
+        audio.src = playlist[i].url;
+        document.getElementById('title').innerText = playlist[i].name;
+        document.getElementById('status').innerText = "PLAYING";
+        document.getElementById('playBtn').innerText = "PAUSE";
+        renderPlaylist();
+        audio.play();
+        initVisualizer();
+    }
+
+    function togglePlay() {
+        if (!audio.src) return;
+        if (audio.paused) { audio.play(); document.getElementById('playBtn').innerText = "PAUSE"; }
+        else { audio.pause(); document.getElementById('playBtn').innerText = "PLAY"; }
+    }
+
+    function stopSong() { audio.pause(); audio.currentTime = 0; document.getElementById('playBtn').innerText = "PLAY"; }
+
+    function changeSong(dir) {
+        let next = (current + dir + playlist.length) % playlist.length;
+        if (playlist.length > 0) playTrack(next);
+    }
+
+    function initVisualizer() {
+        if (actx) return;
+        actx = new (window.AudioContext || window.webkitAudioContext)();
+        analyzer = actx.createAnalyser();
+        src = actx.createMediaElementSource(audio);
+        src.connect(analyzer);
+        analyzer.connect(actx.destination);
+        canvas = document.getElementById('visualizer');
+        ctx = canvas.getContext('2d');
+        loop();
+    }
+
+    function loop() {
+        requestAnimationFrame(loop);
+        let data = new Uint8Array(analyzer.frequencyBinCount);
+        analyzer.getByteFrequencyData(data);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        let bass = data[0] + data[1] + data[2];
+        document.body.style.background = `radial-gradient(circle, rgba(0, 210, 255, ${bass/1200}) 0%, #02050a 100%)`;
+
+        ctx.fillStyle = '#00d2ff';
+        for (let i = 0; i < 45; i++) {
+            let h = data[i] / 1.5;
+            ctx.fillRect(i * 7, canvas.height - h, 4, h);
         }
+    }
+    audio.onended = () => changeSong(1);
+</script>
 
-        function loadSong(index) {
-            currentIndex = index;
-            audio.src = playlist[index].url;
-            document.getElementById('title').innerText = playlist[index].name;
-            updatePlaylistUI();
-            playSong();
-        }
-
-        function playSong() {
-            audio.play();
-            document.getElementById('playBtn').innerText = "PAUSE";
-            document.getElementById('status').innerText = "PLAYING";
-            initVisualizer();
-        }
-
-        function togglePlay() {
-            if (audio.paused) {
-                if (!audio.src && playlist.length > 0) loadSong(0);
-                else audio.play();
-                document.getElementById('playBtn').innerText = "PAUSE";
-            } else {
-                audio.pause();
-                document.getElementById('playBtn').innerText = "PLAY";
-            }
-        }
-
-        function stopSong() {
-            audio.pause();
-            audio.currentTime = 0;
-            document.getElementById('playBtn').innerText = "PLAY";
-        }
-
-        function nextSong() {
-            if(playlist.length > 0) {
-                currentIndex = (currentIndex + 1) % playlist.length;
-                loadSong(currentIndex);
-            }
-        }
-
-        function prevSong() {
-            if(playlist.length > 0) {
-                currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
-                loadSong(currentIndex);
-            }
-        }
-
-        function initVisualizer() {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                source = audioContext.createMediaElementSource(audio);
-                source.connect(analyser);
-                analyser.connect(audioContext.destination);
-                canvas = document.getElementById('visualizer');
-                ctx = canvas.getContext('2d');
-                draw();
-            }
-        }
-
-        function draw() {
-            requestAnimationFrame(draw);
-            const fbc_array = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(fbc_array);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Efek Denyut Background berdasarkan Bass
-            let sum = 0;
-            for(let i = 0; i < 10; i++) sum += fbc_array[i];
-            let bass = sum / 10;
-            document.body.style.background = `radial-gradient(circle, rgba(0, 210, 255, ${bass/800}) 0%, #02050a 100%)`;
-
-            // Gambar Bar Visualizer
-            ctx.fillStyle = '#00d2ff';
-            for (let i = 0; i < 40; i++) {
-                let bar_x = i * 8;
-                let bar_width = 5;
-                let bar_height = -(fbc_array[i] / 2);
-                ctx.fillRect(bar_x, canvas.height, bar_width, bar_height);
-            }
-        }
-        audio.onended = () => nextSong();
-    </script>
 </body>
 </html>
